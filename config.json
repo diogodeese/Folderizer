@@ -1,0 +1,11 @@
+{
+  "folder_mapping": {
+    "images": ["png", "jpeg", "jpg", "gif"],
+    "videos": ["mp4", "mov", "avi"],
+    "documents": ["pdf", "docx", "xlsx", "txt"],
+    "other": []
+  },
+  "DOWNLOAD_DIR": "C:/Users/diogo/Downloads",
+  "DESTINATION_DIR": "C:/Users/diogo/Desktop/TESTE",
+  "DELAY_SECONDS": 3
+}
