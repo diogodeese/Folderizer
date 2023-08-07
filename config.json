@@ -5,7 +5,7 @@
     "documents": ["pdf", "docx", "xlsx", "txt"],
     "other": []
   },
-  "DOWNLOAD_DIR": "C:/Users/diogo/Downloads",
-  "DESTINATION_DIR": "C:/Users/diogo/Desktop/TESTE",
-  "DELAY_SECONDS": 3
+  "DOWNLOAD_DIR": "C:/Users/DeeSe/Downloads",
+  "DESTINATION_DIR": "C:/Users/DeeSe/Desktop/folderizer",
+  "DELAY_SECONDS": 5
 }

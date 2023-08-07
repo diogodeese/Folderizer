@@ -1,63 +1,32 @@
-import os
 import time
-import shutil
+import threading
+from config_reader import read_config
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-import json
+from file_organizer import FileOrganizer
+from icon import run_icon, wait_for_icon_thread
 
-# Read the configuration from the config.json file
-with open("config.json", "r") as config_file:
-    config = json.load(config_file)
+config = read_config()
 
-FOLDER_MAPPING = config["folder_mapping"]
 DOWNLOAD_DIR = config["DOWNLOAD_DIR"]
-DESTINATION_DIR = config["DESTINATION_DIR"]
-DELAY_SECONDS = config["DELAY_SECONDS"]
-
-class FileOrganizer(FileSystemEventHandler):
-    def on_modified(self, event):
-        if event.is_directory:
-            return
-
-        file_path = event.src_path
-        _, ext = os.path.splitext(file_path)
-        ext = ext[1:].lower()  # Remove the dot and convert to lowercase
-
-        if ext:
-            time.sleep(DELAY_SECONDS)  # Adding a delay before moving the file
-            if os.path.isfile(file_path) and os.path.getsize(file_path) > 0:
-                target_folder = "other"  # Default folder for unknown extensions
-
-                for folder, extensions in FOLDER_MAPPING.items():
-                    if ext in extensions:
-                        target_folder = folder
-                        break
-
-                target_folder_path = os.path.join(DESTINATION_DIR, target_folder)
-                if not os.path.exists(target_folder_path):
-                    try:
-                        os.makedirs(target_folder_path)
-                    except OSError as e:
-                        print(f"Error creating folder: {e}")
-                        return
-
-                try:
-                    shutil.move(file_path, os.path.join(target_folder_path, os.path.basename(file_path)))
-                    print(f"File moved: {file_path} -> {target_folder_path}")
-                except Exception as e:
-                    print(f"Error moving file: {e}")
-            else:
-                print(f"Incomplete or non-existent file: {file_path}")
 
 if __name__ == "__main__":
+    # Start the system tray icon in a separate thread
+    icon_thread = threading.Thread(target=run_icon)
+    icon_thread.daemon = True
+    icon_thread.start()
+
     event_handler = FileOrganizer()
     observer = Observer()
     observer.schedule(event_handler, path=DOWNLOAD_DIR, recursive=False)
     observer.start()
-
+    
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
+
+    # Wait for the icon thread to complete before exiting the main thread
+    wait_for_icon_thread()
+    print("Program has exited gracefully.")
