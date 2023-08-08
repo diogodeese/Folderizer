@@ -7,40 +7,37 @@ from watchdog.events import FileSystemEventHandler
 config = read_config()
 
 DELAY_SECONDS = config["DELAY_SECONDS"]
-FOLDER_MAPPING = config["folder_mapping"]
+FOLDER_MAPPING = config["FOLDER_MAPPING"]
 DESTINATION_DIR = config["DESTINATION_DIR"]
 
+# Dictionary to track file sizes for monitoring
+file_sizes = {}
+
 class FileOrganizer(FileSystemEventHandler):
-    def on_modified(self, event):
-        if event.is_directory:
-            return
+    def on_created(self, event):
+        if not event.is_directory:
+            file_path = event.src_path
+            file_extension = os.path.splitext(file_path)[1][1:].lower()
 
-        file_path = event.src_path
-        _, ext = os.path.splitext(file_path)
-        ext = ext[1:].lower()  # Remove the dot and convert to lowercase
+            for folder, extensions in FOLDER_MAPPING.items():
+                if file_extension in extensions:
+                    self.wait_for_download_complete(file_path, folder)
+                    break
 
-        if ext:
-            time.sleep(DELAY_SECONDS)  # Adding a delay before moving the file
-            if os.path.isfile(file_path) and os.path.getsize(file_path) > 0:
-                target_folder = "other"  # Default folder for unknown extensions
+    def wait_for_download_complete(self, file_path, folder):  # Pass 'folder' as an argument
+        while True:
+            try:
+                size = os.path.getsize(file_path)
+                if size == file_sizes.get(file_path):
+                    self.move_file(file_path, folder)  # Pass 'folder' to move_file() as well
+                    break
+                file_sizes[file_path] = size
+            except FileNotFoundError:
+                pass  # File may be deleted during checking
+            time.sleep(1)  # Wait for a second before checking again
 
-                for folder, extensions in FOLDER_MAPPING.items():
-                    if ext in extensions:
-                        target_folder = folder
-                        break
-
-                target_folder_path = os.path.join(DESTINATION_DIR, target_folder)
-                if not os.path.exists(target_folder_path):
-                    try:
-                        os.makedirs(target_folder_path)
-                    except OSError as e:
-                        print(f"Error creating folder: {e}")
-                        return
-
-                try:
-                    shutil.move(file_path, os.path.join(target_folder_path, os.path.basename(file_path)))
-                    print(f"File moved: {file_path} -> {target_folder_path}")
-                except Exception as e:
-                    print(f"Error moving file: {e}")
-            else:
-                print(f"Incomplete or non-existent file: {file_path}")
+    def move_file(self, file_path, folder):
+        destination = os.path.join(DESTINATION_DIR, folder)
+        new_file_path = os.path.join(destination, os.path.basename(file_path))
+        shutil.move(file_path, new_file_path)
+        print(f"Moved {file_path} to {new_file_path}")
